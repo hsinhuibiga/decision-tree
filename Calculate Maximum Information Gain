@@ -1,0 +1,66 @@
+class Solution {
+public:
+    double calculateScaledEntropy(vector<string>& input, int start, int end) {
+        const int analyzedInputSize = (end - start) + 1;
+        double entropy = 0.0;
+        unordered_map<string,int> hashmap;
+
+        for (int i = start; i <= end; ++i) {
+            ++hashmap[input[i]]; 
+        }
+
+        for (const pair<string,int>& p : hashmap) {
+            const double probability = static_cast<double>(p.second) / analyzedInputSize;
+            const double logProbability = log2(probability);            
+            entropy -= (probability * logProbability);
+        }
+
+        double overallContributionRatio = static_cast<double>(analyzedInputSize) / input.size();
+
+        return entropy * overallContributionRatio;
+    }
+    
+    double calculateMaxInfoGain(vector<double>& petal_length, vector<string>& species) {
+        if (petal_length.size() == 0 || species.size() == 0) { return 0.0; }
+        
+        vector<pair<double,int>> petallength_and_indices;
+        
+        // Create a <petal length, index> array and sort it.  We'll use the indices to
+        // create a sorted copy of the parallel string array.
+        for (int i = 0; i < petal_length.size(); ++i) {
+            petallength_and_indices.push_back({petal_length[i], i});
+        }
+        
+        sort(petallength_and_indices.begin(), petallength_and_indices.end());
+        
+        // Create array of 'species' strings that match the sorted petals array.
+        // This will enable us to walk the strings array and calculate entropy
+        // below and above each index as potential pivot.  The best combined 
+        // scores will be saved and included in the returned max info gain result.
+        vector<string> sortedSpecies(species.size());
+        
+        for (int i = 0; i < petallength_and_indices.size(); ++i) {
+            sortedSpecies[i] = species[petallength_and_indices[i].second];
+        }
+
+        // Calculate entropy for the full string list.
+        double overallEntropy = calculateScaledEntropy(sortedSpecies, 0, sortedSpecies.size() - 1);
+
+        // Calculate left & right side entropy, then save the best smallest combined sum
+        // for later analysis.
+        const int sortedSpeciesSize = sortedSpecies.size();
+        double minLeftRightSum = numeric_limits<double>::max();
+        
+        for (int rightStart = 1; rightStart < sortedSpeciesSize; ++rightStart) {
+            double entropyLeft  = calculateScaledEntropy(sortedSpecies, 0, rightStart - 1);
+            double entropyRight = calculateScaledEntropy(sortedSpecies, rightStart, sortedSpeciesSize - 1);
+            double entropySum = entropyLeft + entropyRight;
+            
+            if (entropySum < minLeftRightSum) {
+                minLeftRightSum = entropySum;
+            }
+        }
+        
+        return (overallEntropy - minLeftRightSum);
+    }
+};
